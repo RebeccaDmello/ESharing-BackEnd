@@ -6,7 +6,7 @@ from .database import get_db
 user_routes = Blueprint("user", __name__)
 
 
-@user_routes.route("/")
+@user_routes.route("/all")
 def find_all_user():
     # for testing only
     db = get_db()
@@ -23,9 +23,30 @@ def find_all_user():
 
     # serialize to json string
     users_json_string = json.dumps(users_dicts, default=json_util.default)
-    return jsonify({"users": json.loads(users_json_string)})
+    return jsonify(json.loads(users_json_string))
     # return jsonify({"users": json_util.dumps(users)})
 
+@user_routes.route("/<string:username>/members", methods=["GET"])
+def getMembers(username):
+    db = get_db()
+    # member must be alone and not have any member
+    user = db.users.find_one(
+        {"username": username}, {"members": True})
+    if (user is None):
+        return make_response(jsonify({"message": "user not exist"}), 403)
+    members = user.get("members")
+    return jsonify(json.loads(json_util.dumps(members)))
+
+@user_routes.route("/<string:username>/purchases", methods=["GET"])
+def getPurchases(username):
+    db = get_db()
+    # member must be alone and not have any member
+    user = db.users.find_one(
+        {"username": username}, {"purchases": True})
+    if (user is None):
+        return make_response(jsonify({"message": "user not exist"}), 403)
+    purchases = user.get("purchases")
+    return jsonify(json.loads(json_util.dumps(purchases)))
 
 @user_routes.route("/login", methods=['POST'])
 def login():
@@ -88,7 +109,7 @@ def add_member():
 
         # member must be alone and not have any member
         added_member = db.users.find_one(
-            {"username": "username"}, {"members": True})
+            {"username": member}, {"members": True})
         if (added_member.get("members") is not None and len(added_member.get("members")) > 0):
             return make_response(jsonify({"message": "Can not add member to your household, member must be alone."}), 403)
 
@@ -133,7 +154,7 @@ def remove_member():
 
         # set the removed member to the owner on their own
         db.users.update_one(
-            {"username": username},
+            {"username": member},
             {"$set": {"is_owner": True}}
         )
 
